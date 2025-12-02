@@ -1,6 +1,7 @@
 import csv
 import pickle
 import sys
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -24,7 +25,7 @@ def load_training_data(csv_files):
                     float(row["Ax"]),
                     float(row["Ay"]),
                     float(row["Az"]),
-                    float(row["A_mag"])
+                    float(row["A_mag"]),
                 ]
                 X.append(features)
                 y.append(row["label_name"])
@@ -37,19 +38,24 @@ def train_svm(csv_files, model_path="svm_model.pkl"):
     print("Loading training data...")
     X, y = load_training_data(csv_files)
 
-    print(f"Loaded {len(X)} samples")
-    print(f"Label distribution: {np.unique(y, return_counts=True)}")
+    total_samples = len(X)
+    print(f"Loaded {total_samples} samples")
+
+    label_counts = Counter(y)
+    print("Samples per label:")
+    for label in labels:
+        print(f"  {label}: {label_counts.get(label, 0)}")
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
     print("Training SVM classifier...")
     svm = SVC(
-        kernel='rbf',
+        kernel="rbf",
         C=1.0,
-        gamma='scale',
-        decision_function_shape='ovr',
-        random_state=42
+        gamma="scale",
+        decision_function_shape="ovr",
+        random_state=42,
     )
     svm.fit(X_scaled, y)
 
@@ -67,7 +73,9 @@ def main():
         csv_files = list(Path(".").glob("log_*.csv"))
         if not csv_files:
             print("Usage: python train.py <csv_file1> <csv_file2> ...")
-            print("\nOr place log_*.csv files in the current directory for auto-discovery")
+            print(
+                "\nOr place log_*.csv files in the current directory for auto-discovery"
+            )
             print("Error: No CSV files found.")
             sys.exit(1)
         csv_files = [str(f) for f in csv_files]

@@ -100,8 +100,13 @@ def train_svm(csv_files, model_path="svm_model.pkl", window_size=DEFAULT_WINDOW_
 
     print("\nValidation metrics (hold-out split):")
     print(classification_report(y_val, y_val_pred))
-    print("Confusion matrix:")
-    print(confusion_matrix(y_val, y_val_pred, labels=labels))
+    conf_mat = confusion_matrix(y_val, y_val_pred, labels=labels)
+    print("Confusion matrix (rows=actual, cols=predicted):")
+    header = " " * 15 + " ".join(f"{label:>8}" for label in labels)
+    print(header)
+    for label, row in zip(labels, conf_mat):
+        row_str = " ".join(f"{count:>8}" for count in row)
+        print(f"{label:<15}{row_str}")
 
     print("\nRetraining on entire dataset for final model...")
     final_scaler = StandardScaler()

@@ -21,12 +21,16 @@ def load_training_data(csv_files):
         with open(csv_file, "r") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                features = [
-                    float(row["Ax"]),
-                    float(row["Ay"]),
-                    float(row["Az"]),
-                    float(row["A_mag"]),
-                ]
+                try:
+                    features = [
+                        float(row["Ax"]),
+                        float(row["Ay"]),
+                        float(row["Az"]),
+                        float(row["A_mag"]),
+                    ]
+                except (TypeError, ValueError):
+                    print(f"Skipping invalid row in {csv_file}: {row}")
+                    continue
                 X.append(features)
                 y.append(row["label_name"])
 

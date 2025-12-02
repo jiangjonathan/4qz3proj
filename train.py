@@ -1,7 +1,7 @@
 import csv
 import pickle
 import sys
-from collections import Counter
+from collections import Counter, deque
 from pathlib import Path
 
 import numpy as np
@@ -9,15 +9,34 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
 labels = ["sit", "walk", "run", "squat"]
+DEFAULT_WINDOW_SIZE = 10
 
 
-def load_training_data(csv_files):
-    # Load accelerometer data from CSV files
+def summarize_window(window):
+    array = np.array(window)
+    features = []
+    for axis in range(array.shape[1]):
+        axis_data = array[:, axis]
+        features.extend(
+            [
+                np.mean(axis_data),
+                np.std(axis_data),
+                np.max(axis_data),
+                np.min(axis_data),
+            ]
+        )
+    return np.array(features)
+
+
+def load_training_data(csv_files, window_size=10):
+    # Load accelerometer data from CSV files and emit 16-dim window summaries
     X = []
     y = []
+    window = deque(maxlen=window_size)
 
     for csv_file in csv_files:
         print(f"Loading {csv_file}...")
+        window.clear()
         with open(csv_file, "r") as f:
             reader = csv.DictReader(f)
             for row in reader:
@@ -31,19 +50,22 @@ def load_training_data(csv_files):
                 except (TypeError, ValueError):
                     print(f"Skipping invalid row in {csv_file}: {row}")
                     continue
-                X.append(features)
-                y.append(row["label_name"])
+                window.append((features, row["label_name"]))
+                if len(window) == window_size:
+                    X.append(summarize_window([item[0] for item in window]))
+                    label_counts = Counter(item[1] for item in window)
+                    y.append(label_counts.most_common(1)[0][0])
 
     return np.array(X), np.array(y)
 
 
-def train_svm(csv_files, model_path="svm_model.pkl"):
+def train_svm(csv_files, model_path="svm_model.pkl", window_size=DEFAULT_WINDOW_SIZE):
     # Train multiclass SVM and save to file
     print("Loading training data...")
-    X, y = load_training_data(csv_files)
+    X, y = load_training_data(csv_files, window_size)
 
     total_samples = len(X)
-    print(f"Loaded {total_samples} samples")
+    print(f"Loaded {total_samples} windowed samples (window_size={window_size})")
 
     label_counts = Counter(y)
     print("Samples per label:")

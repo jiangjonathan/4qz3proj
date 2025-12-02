@@ -18,42 +18,44 @@ COLORS = {
     "squat": (255, 255, 0),
 }
 
+DEFAULT_WINDOW_SIZE = 10
+
 
 def extract_window_features(window):
-    # Extract mean, std, max, min for each axis
     if len(window) == 0:
         return np.zeros(16)
 
     window = np.array(window)
 
     features = []
-    for i in range(4):
+    for i in range(window.shape[1]):
         axis_data = window[:, i]
-        features.extend([
-            np.mean(axis_data),
-            np.std(axis_data),
-            np.max(axis_data),
-            np.min(axis_data),
-        ])
+        features.extend(
+            [
+                np.mean(axis_data),
+                np.std(axis_data),
+                np.max(axis_data),
+                np.min(axis_data),
+            ]
+        )
 
     return np.array(features)
 
 
 def load_model(model_path="svm_model.pkl"):
-    # Load trained SVM and scaler from file
     with open(model_path, "rb") as f:
         data = pickle.load(f)
     return data["model"], data["scaler"]
 
 
 def show_classification(label_name):
-    # Display classification on LED matrix
     color = COLORS.get(label_name, (255, 255, 255))
     sense.clear(color)
 
 
-def live_classify(model_path="svm_model.pkl", window_size=10, sample_rate=0.5):
-    # Continuously classify accelerometer data using sliding window
+def live_classify(
+    model_path="svm_model.pkl", window_size=DEFAULT_WINDOW_SIZE, sample_rate=0.5
+):
     print("Loading model...")
     svm, scaler = load_model(model_path)
     print("Model loaded successfully!")
@@ -84,7 +86,9 @@ def live_classify(model_path="svm_model.pkl", window_size=10, sample_rate=0.5):
 
                 if prediction != last_label:
                     show_classification(prediction)
-                    print(f"Classified: {prediction.upper()} (confidence: {confidence:.2f})")
+                    print(
+                        f"Classified: {prediction.upper()} (confidence: {confidence:.2f})"
+                    )
                     last_label = prediction
 
             time.sleep(sample_rate)
@@ -96,7 +100,7 @@ def live_classify(model_path="svm_model.pkl", window_size=10, sample_rate=0.5):
 
 def main():
     model_path = sys.argv[1] if len(sys.argv) > 1 else "svm_model.pkl"
-    window_size = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+    window_size = int(sys.argv[2]) if len(sys.argv) > 2 else DEFAULT_WINDOW_SIZE
     sample_rate = float(sys.argv[3]) if len(sys.argv) > 3 else 0.5
 
     live_classify(model_path, window_size, sample_rate)
